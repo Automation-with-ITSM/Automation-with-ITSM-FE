@@ -1,256 +1,215 @@
-# 💐 Wedit - Front
-
-## ⭐️ 브랜치(Branch) 컨벤션
-
-1. **main** : 최종 배포를 위한 branch. Pull Request를 이용해 develope branch를 최종 merge
-2. **develop** : 배포하기 전 개발 중일 때 각자의 브랜치에서 merge하는 브랜치
-3. **feat / #이슈 번호 / 기능명** : feature 브랜치. 새로운 기능 개발. 개발이 완료되면 develop 브랜치로 병합
-4. **fix / #이슈 번호 / 기능명** : fix 브랜치. 생성 후 버그가 생겼을 때 수정하는 브랜치
-5. **refactor / #이슈 번호 / 작업 내용** : 코드 리팩토링 작업을 할 때 사용하는 브랜치. 기능에 영향을 주지 않는 구조 개선 작업 후 `develop` 브랜치로 병합
-
-- **git-flow 방식**  
-   \* 내가 만들고가 하는 기능이나 문제들을 먼저 issue로 올리고 올린 이슈 넘버를 활용해서 feature/#1-signup 이런식으로 새로운 브런치를 만들어서 기능을 구현하거나 리펙토링 한 다음에 이 브런치 들을 develop 브랜치에 merge 하는 구조
-
-- **브랜치 생성**
-
-❗❗항상 develop에 체크아웃해서 만들것❗❗  
-( develop 브랜치에서 새로운 브랜치를 만들어야 가장 최신 상태를 유지하는 하위 브랜치가 생성된다. )
-
-      $ git branch feat/#이슈번호/기능명
-
-- **브랜치 체크아웃 ( 만든 브랜치로 이동 )**
-
-      $ git checkout feat/#이슈번호/기능명
-
----
-
-## ⭐️ 코딩(Coding) 컨벤션
-
-### 네이밍 컨벤션
-
-- **변수 / 함수 / 메서드** : Camel Case(카멜 케이스)
-- **컴포넌트** : Pascal Case(파스칼 케이스)
-
-### 들여쓰기 컨벤션
-
-- **들여쓰기** : Tab
-
-### 주석 컨벤션
-
-- **한 줄 주석** : //
-- **여러 줄 주석** : /\*\*/
-
----
-
-## ⭐️ GitHub Projects 사용 방법
-
-### 프로젝트 설정
-
-1. **이슈 등록**
-
-   - 이슈를 등록할 때 반드시 **Wedit-Client**(프론트엔드) 프로젝트를 선택하세요.
-   - 예시: `Wedit-Client` 프로젝트에서 프론트엔드 관련 이슈를 등록합니다.
-
-2. **이슈 상태 관리**
-   - 이슈가 생성되면 `No status`로 표시됩니다.
-   - 진행 중인 작업은 `Todo`로 이동시키고, 개발 중인 작업은 `In Progress`로 이동시킵니다.
-   - 작업 완료 후 `Done`으로 이동시키고, 이슈를 닫습니다.
-
-### 이슈 상태 드래그 앤 드롭
-
-- **Todo**: 해야 할 일
-- **In Progress**: 진행 중인 작업
-- **Done**: 완료된 작업
-- **No status**: 상태 미설정 상태
-
-### 이슈 종료
-
-이슈가 종료되면, 해당 이슈는 자동으로 `Done` 상태로 이동합니다.
-
-(참고 : pr을 통해 merge될 경우 자동으로 이슈가 Closes됩니다!)
-
----
-
-## ⭐️ 이슈(Issue) 컨벤션
-
-### 제목 규칙
-
-- **[Feat] 기능 추가 시**: `[Feat] 로그인 기능 추가`
-- **[Fix] 오류/버그 발생 시**: `[Fix] 로그인 오류 수정`
-- **[Refactor] 리팩토링 시**: `[Refactor] 로그인 페이지 리팩토링`
-
-### 내용 규칙
-
-#### 🚀 기능 요청(Feature Request)
-
-- **기능 요약**: 추가하려는 기능에 대한 간략한 설명
-  - 예시: 로그인 기능 추가
-- **상세 설명**: 기능의 동작 방식 및 목적을 구체적으로 작성
-  - 작업한 내용:
-    - [ ] 기능 1 구현
-    - [ ] 기능 2 수정
-- **스크린샷** (선택): 관련된 스크린샷, 로그 또는 참고 자료를 추가
-
-#### 🐛 버그 보고(Bug Report)
-
-- **발생한 오류**: 발견된 문제에 대한 간략한 설명
-  - 예시: 로그인 시 "잘못된 토큰" 오류 발생
-- **발생한 원인**: 오류 발생 원인을 구체적으로 작성
-  - 예시: 클라이언트와 서버 간 JWT 만료 시간 불일치
-- **해결 방안**: 문제를 해결하기 위한 방법 제시
-  - 예시: 서버와 클라이언트의 JWT 만료 시간을 동일하게 설정
-- **결과**: 해결 후 결과
-  - 예시: 로그인 오류 해결 완료
-
-#### 🔄 리팩토링 요청(Refactor Request)
-
-- **리팩토링 대상**: 리팩토링할 코드 또는 모듈에 대한 설명
-  - 예시: 로그인 페이지 코드 리팩토링
-- **리팩토링 이유**:
-  - [ ] 가독성 향상
-  - [ ] 코드 재사용성 증대
-  - [ ] 성능 최적화
-- **리팩토링 결과**: 리팩토링 후 변경 사항
-  - 예시: 코드 구조 개선 완료
-- **스크린샷** (선택): 관련된 스크린샷, 로그 또는 참고 자료 추가
-
-#### ⚠️ 주의 사항
-
-- **Labels 설정이 잘 되어 있는지 확인해주세요!**
-
-  - 이슈 생성 시 적절한 라벨을 부착해야 이슈의 범주를 정확히 구분할 수 있습니다.
-  - 예: `Feature`, `Bug`, `Refactor`, `Enhancement` 등
-
-- **Projects 설정이 잘 되어 있는지 확인해주세요!**
-  - 각 이슈가 적절한 **프로젝트**에 할당되었는지 확인해 주세요.
-  - 이슈가 할당되지 않거나 잘못된 프로젝트에 할당될 경우, 진행 상황 추적에 어려움이 있을 수 있습니다.
-  - 예: `Wedit-Client` 또는 `Wedit-Server` 프로젝트로 이슈를 할당해야 합니다.
-
----
-
-# ⭐️ Style Guide for Components
-
-## 📖 **Overview**
-
-이 문서는 프로젝트에서 컴포넌트를 스타일링할 때 준수해야 할 가이드라인과 네이밍 규칙, 반응형 작업 규칙을 정의합니다.
-
-## 🎨 **Style Rules**
-
-### 1️⃣ **스타일드 컴포넌트 사용**
-
-- 모든 스타일은 **Styled-Components**로 작성합니다.
-- **CSS 선택자 사용 금지** (가독성을 높이고 유지보수를 쉽게 하기 위함).
-
-### 2️⃣ **단위 규칙**
-
-- 모든 스타일 크기 값은 **`rem` 단위**로 작성합니다.
-
-### 3️⃣ **SVG 규칙**
-
-- 모든 SVG 파일은 `width`와 `height` 속성을 부여하여 **반응형 지원**을 보장합니다.
-
-## 🏷️ **Component Naming Convention**
-
-### 네이밍 규칙
-
-| 태그      | 네이밍 예시         | 설명                   |
-| --------- | ------------------- | ---------------------- |
-| `div`     | `컴포넌트명Box`     | 박스 형태 컨테이너     |
-| `section` | `컴포넌트명Section` | 섹션 구조              |
-| `ul`      | `컴포넌트명List`    | 리스트 구조            |
-| `li`      | `컴포넌트명Item`    | 리스트 항목            |
-| `p`       | `컴포넌트명Text`    | 텍스트 요소            |
-| `span`    | `컴포넌트명Span`    | 짧은 텍스트, 강조 요소 |
-| `svg`     | `컴포넌트명Icon`    | 아이콘 요소            |
-
-### 래퍼(Wrapper) 컴포넌트 네이밍
-
-| 역할        | 네이밍 예시 | 설명                        |
-| ----------- | ----------- | --------------------------- |
-| 최상위 래퍼 | `Wrapper`   | 전체 컴포넌트를 감싸는 래퍼 |
-| 레이아웃    | `Layout`    | 페이지 레이아웃             |
-| 컨테이너    | `Container` | 주요 컨텐츠를 담는 컨테이너 |
-| 박스        | `Box`       | 작은 블록 형태의 컴포넌트   |
-
-## 📱 **Responsive Design**
-
-### 1️⃣ **미디어 쿼리**
-
-- 반응형 디자인을 위해 **미디어 쿼리**를 활용합니다.
-- 예시:
-  ```css
-  @media (min-width: 480px) and (max-width: 1023px) {
-    /* 태블릿 */
-  }
-  @media (max-width: 479px) {
-    /* 모바일 */
-  }
-  ```
-
----
-
-## ⭐️ PR(Pull Request) 컨벤션
-
-### PR 제목
-
-[Feat/#이슈 번호] " pr message "
-(예시 : [Feat/#1] "로그인 기능 추가")
-
-### 📌 관련 이슈번호
-
-(Closes 키워드가 있어야 PR이 머지되었을 때 이슈가 자동으로 닫힌다)
-
-- Closes #이슈 번호
-
-### 📌 PR 유형
-
-어떤 변경 사항이 있나요?
-
-- [ ] 새 기능 추가
-- [ ] 버그 수정
-- [ ] CSS 등 사용자 UI 디자인 변경
-- [ ] 리팩토링
-
-### 📌 PR 요약
-
-해당 PR을 간단하게 요약해 주세요
-
-### 📌 작업 세부 내용
-
-1.
-2.
-3.
-
-### 📸 스크린샷 (선택)
-
-### 🔗 참고 자료
-
-​
-
----
-
-## ⭐️ 커밋(Commit) 컨벤션
-
-      [type]: 커밋 메시지 타입
-      git commit -m "<type>: <subject>"
-
-
-      (예시: git commit -m "feat: 회원 가입 기능 구현" )
-
-- **커밋 메시지 타입**
-
-1. **init** : 프로젝트 초기 생성 및 설정
-2. **feat** : 새로운 기능 추가, 기존의 기능을 요구 사항에 맞추어 수정
-3. **fix** : 기능에 대한 버그 수정
-4. **build** : 빌드 관련 수정
-5. **chore** : 패키지 매니저 수정, 그 외 기타 수정 ex) .gitignore
-6. **docs** : 문서(주석) 수정
-7. **style** : 코드 스타일, 포맷팅에 대한 수정
-8. **refactor** : 기능의 변화가 아닌 코드 리팩터링 ex) 변수 이름 변경
-   <br />
-
-- **커밋 작성 가이드**
-
-1. **작은 단위로 커밋** : 하나의 작업에 대해 간결한 커밋 작성
-
-2. **변경 목적을 분명히** : 변경 이유와 작업 내용을 명확히 기재
+# <img src="https://github.com/user-attachments/assets/482c5290-cfb9-43de-8b27-34231914a92a" style="height: 1em; vertical-align: middle;"> Wedit
+
+![표지](https://github.com/user-attachments/assets/38077619-6e54-4ef4-b17f-6facb597ef09)
+
+
+##  서비스 소개
+<div align="left">
+<img src="https://github.com/user-attachments/assets/c1f238f8-b537-477f-9984-a5dd470f15b0" width="300">
+
+
+> 개발 기간: 2024. 1. 3 ~ 2025. 2. 21  
+
+**"Wedit: Wedding + Edit"**
+
+디지털로 만나는 나만의 특별한 커스텀 모바일 청첩장
+
+예비 부부들이 디지털 환경에서 쉽고 빠르게 결혼 소식을 알리고,
+자신만의 개성있는 모바일 청첩장을 제작할 수 있도록 돕는 웹 서비스
+
+</div>
+
+## 👥 팀원 소개
+
+### Project Manager
+
+<table>
+  <tr>
+    <td align="center"><img src="https://github.com/cherry-p0p.png" width="160"></td>
+  </tr>
+  <tr>
+    <td align="center"><a href="https://github.com/cherry-p0p">최리원</td>
+  </tr>
+    <tr>
+    <td align="center">Project Manager / PO</td>
+  </tr>
+</table>
+
+### Designer
+
+<table>
+  <tr>
+    <td align="center"><img src="https://github.com/user-attachments/assets/c7533101-92f2-4912-8ed5-bea417151579" width="160" height="160"></td>
+
+  </tr>
+  <tr>
+    <td align="center"><a href="">김민지</td>
+  </tr>
+    <tr>
+    <td align="center">Designer</td>
+  </tr>
+</table>
+
+### Frontend
+
+<table>
+  <tr>
+    <td align="center"><img src="https://github.com/ah-o-ng12.png" width="160"></td>
+    <td align="center"><img src="https://github.com/lyn0719.png" width="160"></td>
+    <td align="center"><img src="https://github.com/rhdmschdl.png" width="160"></td>
+  </tr>
+  <tr>
+    <td align="center">청첩장/분석 페이지</td>
+    <td align="center">메인/로그인 페이지</td>
+    <td align="center">제작/로딩 페이지</td>
+  </tr>
+  <tr>
+    <td align="center"><a href="https://github.com/ah-o-ng12">이아영</td>
+    <td align="center"><a href="https://github.com/lyn0719">이예나</td>
+    <td align="center"><a href="https://github.com/rhdmschdl">최고은</td>
+  </tr>
+    <tr>
+    <td align="center">FE Lead</td>
+    <td align="center">FE</td>
+    <td align="center">FE</td>
+  </tr>
+</table>
+
+### Backend
+
+<table>
+  <tr>
+    <td align="center"><img src="https://github.com/dyk-im.png" width="160"></td>
+    <td align="center"><img src="https://github.com/dogsub.png" width="160"></td>
+    <td align="center"><img src="https://github.com/leeseulgi0208.png" width="160"></td>
+    <td align="center"><img src="https://github.com/KyunghwanChoi.png" width="160"></td>
+  </tr>
+  <tr>
+    <td align="center"><a href="https://github.com/ehs208">김동윤</td>
+    <td align="center"><a href="https://github.com/seokjun01">김동섭</td>
+    <td align="center"><a href="https://github.com/dyk-im">이슬기</td>
+    <td align="center"><a href="https://github.com/jj0526">최경환</td>
+  </tr>
+  <tr>
+    <td align="center">인프라/정보조회</td>
+    <td align="center">회원</td>
+    <td align="center">청첩장</td>
+    <td align="center">방명록/의사결정</td>
+  </tr>
+    <tr>
+    <td align="center">BE Lead</td>
+    <td align="center">BE</td>
+    <td align="center">BE</td>
+    <td align="center">BE</td>
+  </tr>
+</table>
+
+## 📱 주요 기능
+
+- **커스텀 청첩장 제작**
+<img width="1449" alt="스크린샷 2025-03-17 오후 5 05 40" src="https://github.com/user-attachments/assets/3e0d4b82-2edf-4c70-9391-ca914c687956" />
+
+- **테마 청첩장 선택 (기본형)** 
+<img width="1449" alt="스크린샷 2025-03-17 오후 5 08 41" src="https://github.com/user-attachments/assets/ca9708cb-2934-48a7-83f9-e84a74e73f3b" />
+
+
+- **테마 청첩장 선택 (전통형)**  
+<img width="1447" alt="스크린샷 2025-03-17 오후 5 08 53" src="https://github.com/user-attachments/assets/6fa3cd6d-b4a2-4a1b-ab5f-12a5f0ad4554" />
+
+- **IA**  
+<img width="682" alt="스크린샷 2025-03-17 오후 5 08 23" src="https://github.com/user-attachments/assets/bb4de0aa-4938-4332-a0c5-6739979190cb" />
+
+## 💻 화면
+
+<table align="center" style="border-collapse: collapse; width: 100%; max-width: 1200px; margin: 20px;">
+    <tr>
+        <td align="center" style="width: 50%; padding: 10px;">
+            <img src="https://github.com/user-attachments/assets/51d69616-e246-49a0-9883-413442fe98e5" alt="전통형 청첩장" style="width: 100%; max-width: 500px;">
+        </td>
+        <td align="center" style="width: 50%; padding: 10px;">
+            <img src="https://github.com/user-attachments/assets/85bb376e-4e9f-4baf-829d-91b09b8799e6" alt="기본형 청첩장" style="width: 100%; max-width: 500px;">
+        </td>
+    </tr>
+    <tr>
+        <td><p align="center"><strong>전통형 청첩장</strong></p></td>
+        <td><p align="center"><strong>기본형 청첩장</strong></p></td>
+    </tr>
+    <tr>
+        <td align="center" style="width: 50%; padding: 10px;">
+            <img src="https://github.com/user-attachments/assets/9553fa8c-5256-4c7c-b72d-fec2cbb13fc4" alt="제작하기 1" style="width: 100%; max-width: 500px;">
+        </td>
+        <td align="center" style="width: 50%; padding: 10px;">
+            <img src="https://github.com/user-attachments/assets/d4154508-a0c4-4292-9fe1-20e7913f7a97" alt="제작하기 2" style="width: 100%; max-width: 500px;">
+        </td>
+    </tr>
+    <tr>
+        <td><p align="center"><strong>제작하기 1</strong></p></td>
+        <td><p align="center"><strong>제작하기 2</strong></p></td>
+    </tr>
+    <tr>
+        <td align="center" style="width: 50%; padding: 10px;">
+            <img src="https://github.com/user-attachments/assets/b7f5f181-d947-444a-ac1f-80354a4f55f6" alt="마이페이지" style="width: 100%; max-width: 500px;">
+            <p align="center">
+        </td>
+        <td align="center" style="width: 50%; padding: 10px;">
+            <img src="https://github.com/user-attachments/assets/c1337571-13a6-4801-91bb-5bdaa96b08a6" alt="분석 보기" style="width: 100%; max-width: 500px;">
+            <p align="center">
+        </td>
+    </tr>
+    <tr>
+        <td><p align="center"><strong>마이페이지</strong></p></td>
+        <td><p align="center"><strong>분석 보기</strong></p></td>
+    </tr>
+    <tr>
+        <td align="center" style="width: 50%; padding: 10px;">
+             <img src="https://github.com/user-attachments/assets/4afa3e47-b00f-4d25-9e9c-07258e5d9ecc" alt="홈" style="width: 100%; max-width: 500px;">
+        </td>
+        <td align="center" style="width: 50%; padding: 10px;">
+            <img src="https://github.com/user-attachments/assets/38e17d5d-4bf0-4ad5-9788-cbbe982ed73b" alt="로그인" style="width: 100%; max-width: 500px;">
+        </td>
+    </tr>
+    <tr>
+        <td><p align="center"><strong>홈</strong></p></td>
+        <td><p align="center"><strong>로그인</strong></p></td>
+    </tr>
+</table>
+
+
+## ⚙️ 아키텍처 구조
+
+<img width="1510" alt="스크린샷 2025-03-17 오후 6 59 57" src="https://github.com/user-attachments/assets/89d08d7d-c5b7-4911-a015-ecc447dadc49" />
+
+
+## 🛠️ 기술 스택
+
+### Frontend
+![React](https://img.shields.io/badge/React-61DAFB?style=flat&logo=react&logoColor=black)
+![Recoil](https://img.shields.io/badge/Recoil-3578E5?style=flat&logo=recoil&logoColor=white)
+![Vite](https://img.shields.io/badge/Vite-646CFF?style=flat&logo=vite&logoColor=white)
+
+### Backend
+
+![Spring Boot](https://img.shields.io/badge/Spring%20Boot-6DB33F?style=flat&logo=springboot&logoColor=white)
+![Spring Security](https://img.shields.io/badge/Spring%20Security-6DB33F?style=flat&logo=springsecurity&logoColor=white)
+![JPA](https://img.shields.io/badge/JPA-007396?style=flat&logo=hibernate&logoColor=white)
+![Redis](https://img.shields.io/badge/Redis-DC382D?style=flat&logo=redis&logoColor=white)
+![MySQL](https://img.shields.io/badge/MySQL-4479A1?style=flat&logo=mysql&logoColor=white)
+![JWT](https://img.shields.io/badge/JWT-000000?style=flat&logo=jsonwebtokens&logoColor=white)
+
+### Infra
+
+![AWS S3](https://img.shields.io/badge/AWS%20S3-569A31?style=flat&logo=amazons3&logoColor=white)
+![AWS EC2](https://img.shields.io/badge/AWS%20EC2-FF9900?style=flat&logo=amazonec2&logoColor=white)
+![AWS RDS](https://img.shields.io/badge/Amazon%20RDS-527FFF?style=flat&logo=amazonrds&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat&logo=docker&logoColor=white)
+![GitHub Actions](https://img.shields.io/badge/GitHub%20Actions-2088FF?style=flat&logo=githubactions&logoColor=white)
+![Nginx](https://img.shields.io/badge/Nginx-009639?style=flat&logo=nginx&logoColor=white)
+![Netlify](https://img.shields.io/badge/Netlify-00C7B7?style=flat&logo=netlify&logoColor=white)
+![Certbot](https://img.shields.io/badge/Certbot-3A579A?style=flat&logo=letsencrypt&logoColor=white)
+
+### Collaboration Tool
+![GitHub](https://img.shields.io/badge/GitHub-181717?style=flat&logo=github&logoColor=white)
+![Notion](https://img.shields.io/badge/Notion-000000?style=flat&logo=notion&logoColor=white)
+![Discord](https://img.shields.io/badge/Discord-5865F2?style=flat&logo=discord&logoColor=white)
+
+</div>
