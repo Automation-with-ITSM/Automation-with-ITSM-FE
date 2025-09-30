@@ -24,3 +24,21 @@ dist-ssr
 *.sw?
 
 .env
+.env.*
+
+# Vite cache
+.cache
+vite.config.ts.timestamp-*
+vite.config.js.timestamp-*
+
+# Test output
+coverage
+cypress/videos/
+cypress/screenshots/
+
+# Docker
+*.pid
+.dockerignore
+
+# OS
+Thumbs.db
