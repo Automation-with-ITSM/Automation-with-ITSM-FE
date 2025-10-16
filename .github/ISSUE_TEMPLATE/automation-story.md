@@ -1,7 +1,3 @@
-## 📝 이슈 생성 폼
-
----
-
 ### 📄 이슈 개요 (Description)
 {{description}}
 
