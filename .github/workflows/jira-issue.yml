@@ -1,0 +1,57 @@
+name: Create issue from Jira
+
+on:
+  repository_dispatch:
+    types: [jira-issue]
+
+jobs:
+  create-issue:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # 템플릿 파일 읽기
+      - id: read_template
+        run: |
+          TPL="$(cat .github/ISSUE_TEMPLATE/automation-story.tpl.md)"
+          # GitHub Actions 출력에 안전하게 넣기
+          TPL="${TPL//'%'/'%25'}"
+          TPL="${TPL//$'\n'/'%0A'}"
+          TPL="${TPL//$'\r'/'%0D'}"
+          echo "tpl=$TPL" >> $GITHUB_OUTPUT
+
+      # payload 바인딩해서 본문 만들기
+      - id: render
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const tpl = `${{ steps.read_template.outputs.tpl }}`;
+            const p = context.payload.client_payload; // Jira가 보낸 데이터
+            function esc(s=''){ return String(s); } // (필요시 더 강한 escape 추가)
+            let body = tpl
+              .replaceAll('{{key}}', esc(p.key))
+              .replaceAll('{{url}}', esc(p.url))
+              .replaceAll('{{summary}}', esc(p.summary))
+              .replaceAll('{{initiator}}', esc(p.initiator))
+              .replaceAll('{{priority}}', esc(p.priority))
+              .replaceAll('{{duedate}}', esc(p.duedate))
+              .replaceAll('{{labels}}', (p.labels||[]).join(', '))
+              .replaceAll('{{description}}', esc(p.description));
+            core.setOutput('body', body);
+
+      # 이슈 생성
+      - name: Create GitHub issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const p = context.payload.client_payload;
+            const title = `[${p.key}] ${p.summary}`;
+            const labels = p.ghLabels && Array.isArray(p.ghLabels) ? p.ghLabels : [p.kind||'Story'];
+            const res = await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              body: `${{ steps.render.outputs.body }}`,
+              labels
+            });
+            core.info(`Created issue #${res.data.number}`);
