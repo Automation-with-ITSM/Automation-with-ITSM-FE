@@ -1,3 +1,5 @@
+# [{{issue.key}}] {{issue.summary}}
+
 ### 📄 이슈 개요 (Description)
 {{description}}
 
@@ -19,7 +21,7 @@
 ---
 
 ### 🏷️ 레이블
-{{labels}}
+Bug
 
 ---
 
