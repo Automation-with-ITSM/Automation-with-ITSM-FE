@@ -1,4 +1,6 @@
-### 📄 이슈 개요 (Description)
+# [{{issue.key}}] {{issue.summary}}
+
+## 📄 이슈 개요 (Description)
 {{description}}
 
 ---
