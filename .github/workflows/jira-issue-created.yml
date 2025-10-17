@@ -23,11 +23,11 @@ jobs:
             const p = context.payload.client_payload || {};
             const kind = (p.kind || '').toLowerCase();
             const mapping = {
-              'story': '.github/ISSUE_TEMPLATE/auto-story.md',
-              'bug': '.github/ISSUE_TEMPLATE/auto-bug.md',
-              'task': '.github/ISSUE_TEMPLATE/auto-task.md'
+              'story': '.github/ISSUE_TEMPLATE/automation-story.md',
+              'bug': '.github/ISSUE_TEMPLATE/automation-bug.md',
+              'task': '.github/ISSUE_TEMPLATE/automation-task.md'
             };
-            const file = mapping[kind] || '.github/ISSUE_TEMPLATE/auto-task.md';
+            const file = mapping[kind] || '.github/ISSUE_TEMPLATE/automation-task.md';
             core.info(`Kind: ${kind} -> template: ${file}`);
             core.setOutput('file', file);
 
