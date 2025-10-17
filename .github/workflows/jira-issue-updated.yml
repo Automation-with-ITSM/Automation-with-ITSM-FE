@@ -13,23 +13,27 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - id: render
         uses: actions/github-script@v7
         with:
           script: |
             const p = context.payload.client_payload || {};
-            // 필요시 생성 때와 같은 템플릿을 재렌더링해 본문을 '완성형'으로 교체
-            const esc = s => (s||'').toString();
-            const body =
-`## 📝 개요
-${esc(p.description)}
+            const esc = (s) => (s ?? '').toString();
 
----
-
-**우선순위**: ${esc(p.priority)}  
-**라벨**: ${esc(p.labels)}  
-
-🔗 Jira: [${esc(p.key)}](${esc(p.url)})`;
+            // 백틱(template literal) 대신 배열 + join('\n')로 본문 구성
+            const bodyLines = [
+              '## Description',
+              esc(p.description),
+              '',
+              '---',
+              '',
+              `**Priority**: ${esc(p.priority)}`,
+              `**Labels**: ${esc(Array.isArray(p.labels) ? p.labels.join(', ') : p.labels)}`,
+              '',
+              `Jira: [${esc(p.key)}](${esc(p.url)})`
+            ];
+            const body = bodyLines.join('\n');
             core.setOutput('body', body);
 
       - name: Patch GitHub issue
@@ -39,8 +43,11 @@ ${esc(p.description)}
             const p = context.payload.client_payload || {};
             const number = Number(p.issue_number);
             if (!number) {
-              core.setFailed('Missing issue_number'); return;
+              core.setFailed('Missing issue_number in payload'); 
+              return;
             }
+
+            // 제목 업데이트
             await github.rest.issues.update({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -48,11 +55,15 @@ ${esc(p.description)}
               title: `[${p.key}] ${p.summary}`,
               body: `${{ steps.render.outputs.body }}`
             });
-            // 라벨 동기화(있으면 덮어쓰기)
-            const labels = (p.labels || '')
-              .split(',')
-              .map(s => s.trim())
-              .filter(Boolean);
+
+            // 라벨 동기화 (Jira → GitHub)
+            let labels = [];
+            if (Array.isArray(p.labels)) {
+              labels = p.labels.filter(Boolean);
+            } else if (typeof p.labels === 'string') {
+              labels = p.labels.split(',').map(s => s.trim()).filter(Boolean);
+            }
+
             if (labels.length) {
               await github.rest.issues.setLabels({
                 owner: context.repo.owner,
