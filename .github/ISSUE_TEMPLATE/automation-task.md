@@ -1,3 +1,5 @@
+# [{{issue.key}}] {{issue.summary}}
+
 ### 📄 이슈 개요 (Description)
 {{description}}
 
@@ -15,11 +17,6 @@
 
 ### 📅 기한
 {{duedate}}
-
----
-
-### 🏷️ 레이블
-{{labels}}
 
 ---
 
