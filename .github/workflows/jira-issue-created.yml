@@ -1,4 +1,4 @@
-name: Create GitHub Issue from Jira (no-encode)
+name: Create GitHub Issue from Jira
 
 on:
   repository_dispatch:
