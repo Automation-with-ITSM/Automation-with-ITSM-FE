@@ -98,17 +98,20 @@ jobs:
           script: |
             const p = context.payload.client_payload || {};
             const title = `[${p.key}] ${p.summary}`;
-
+      
+            // 1️⃣ 디코딩 추가
+            const encoded = `${{ steps.render.outputs.body }}`;
+            const body = decodeURIComponent(encoded);
+      
             const labels = JSON.parse(`${{ steps.labels.outputs.labels }}`);
-
+      
             const res = await github.rest.issues.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
               title,
-              body: `${{ steps.render.outputs.body }}`,
+              body,  // 2️⃣ 디코딩된 텍스트로 전달
               labels
             });
-
             core.info(`Created issue #${res.data.number}`);
 
             // (선택) 생성된 GitHub 이슈 번호를 출력 (Jira 커스텀 필드에 저장할 때 유용)
