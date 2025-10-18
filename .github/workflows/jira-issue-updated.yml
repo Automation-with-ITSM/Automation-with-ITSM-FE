@@ -1,4 +1,4 @@
-name: Update issue from Jira
+name: Update issue from Jira (no-encode)
 
 on:
   repository_dispatch:
@@ -14,61 +14,91 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - id: render
+      - name: Render and patch existing issue
         uses: actions/github-script@v7
         with:
           script: |
             const p = context.payload.client_payload || {};
             const esc = (s) => (s ?? '').toString();
+            const nz  = (s, f='') => { const v = esc(s).trim(); return v ? v : f; };
 
-            // 백틱(template literal) 대신 배열 + join('\n')로 본문 구성
-            const bodyLines = [
-              '## Description',
-              esc(p.description),
-              '',
-              '---',
-              '',
-              `**Priority**: ${esc(p.priority)}`,
-              `**Labels**: ${esc(Array.isArray(p.labels) ? p.labels.join(', ') : p.labels)}`,
-              '',
-              `Jira: [${esc(p.key)}](${esc(p.url)})`
-            ];
-            const body = bodyLines.join('\n');
-            core.setOutput('body', body);
-
-      - name: Patch GitHub issue
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const p = context.payload.client_payload || {};
+            // 0) 필수 값 확인
             const number = Number(p.issue_number);
             if (!number) {
               core.setFailed('Missing issue_number in payload'); 
               return;
             }
 
-            // 제목 업데이트
+            // 1) kind 정규화 (story/bug/task)
+            const rawKind = esc(p.kind).toLowerCase();
+            let kind = 'task';
+            if (rawKind.startsWith('story')) kind = 'story';
+            else if (rawKind.startsWith('bug')) kind = 'bug';
+
+            // 2) 본문 재구성 (템플릿 없이 Markdown 조립)
+            const bodyLines = [
+              '## 📄 이슈 개요 (Description)',
+              esc(p.description),
+              '',
+              '---',
+              '',
+              '### 🧑‍💻 생성자',
+              esc(p.initiator),
+              '',
+              '---',
+              '',
+              '### 🎯 우선순위',
+              esc(p.priority),
+              '',
+              '---',
+              '',
+              '### 📅 기한',
+              nz(p.duedate, '미정'),
+              '',
+              '---',
+              '',
+              '### 🔗 Jira Link',
+              `[${esc(p.key)}](${esc(p.url)})`
+            ];
+            const body = bodyLines.join('\n');
+
+            // 3) 라벨 동기화 규칙
+            //    - Story: ["Story"]
+            //    - Bug:   ["Bug"]
+            //    - Task:  Jira labels 중 Feature/Refactor/Documentation만 허용(대소문자 보정)
+            const allowed = new Set(['Feature','Refactor','Documentation']);
+            let labels = [];
+            if (kind === 'story') {
+              labels = ['Story'];
+            } else if (kind === 'bug') {
+              labels = ['Bug'];
+            } else {
+              let incoming = [];
+              if (Array.isArray(p.labels)) incoming = p.labels;
+              else if (typeof p.labels === 'string') incoming = p.labels.split(',').map(s=>s.trim()).filter(Boolean);
+              const toTitle = s => s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : s;
+              labels = incoming.map(toTitle).filter(v => allowed.has(v));
+              if (labels.length === 0) labels = ['Task']; // 필요 없으면 제거 가능
+            }
+
+            // 4) 제목 갱신
+            const title = `[${esc(p.key)}] ${esc(p.summary)}`;
+
+            // 5) GitHub Issue Patch
             await github.rest.issues.update({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: number,
-              title: `[${p.key}] ${p.summary}`,
-              body: `${{ steps.render.outputs.body }}`
+              title,
+              body
             });
 
-            // 라벨 동기화 (Jira → GitHub)
-            let labels = [];
-            if (Array.isArray(p.labels)) {
-              labels = p.labels.filter(Boolean);
-            } else if (typeof p.labels === 'string') {
-              labels = p.labels.split(',').map(s => s.trim()).filter(Boolean);
-            }
+            // 6) 라벨 덮어쓰기
+            await github.rest.issues.setLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: number,
+              labels
+            });
 
-            if (labels.length) {
-              await github.rest.issues.setLabels({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: number,
-                labels
-              });
-            }
+            core.info(`Patched issue #${number} (kind=${kind}, labels=${JSON.stringify(labels)})`);
