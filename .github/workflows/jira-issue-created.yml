@@ -47,33 +47,18 @@ jobs:
           script: |
             const tpl = `${{ steps.read_tpl.outputs.tpl }}`;
             const p = context.payload.client_payload || {};
-            const esc = (s='') => String(s ?? '');
-            const nz = (s, fallback='') => (s && String(s).trim().length ? String(s) : fallback);
-      
-            // 값 준비 (기본값 포함)
-            const key = esc(p.key);
-            const url = esc(p.url);
-            const summary = esc(p.summary);
-            const description = esc(p.description);
-            const initiator = esc(p.initiator);
-            const priority = esc(p.priority);
-            const duedate = nz(p.duedate, '미정');
-      
-            // 여러 표기 변형 동시 치환
+            const esc = (s='') => String(s);
+
+            // 템플릿의 플레이스홀더 치환
             let body = tpl
-              .replaceAll('{{issue.key}}', key)
-              .replaceAll('{{key}}', key)
-              .replaceAll('{{issue.url}}', url)
-              .replaceAll('{{url}}', url)
-              .replaceAll('{{issue.summary}}', summary)
-              .replaceAll('{{summary}}', summary)
-              .replaceAll('{{description}}', description)
-              .replaceAll('{{initiator}}', initiator)
-              .replaceAll('{{priority}}', priority)
-              .replaceAll('{{issue.duedate}}', duedate)
-              .replaceAll('{{duedate}}', duedate);
-      
-            core.setOutput('body', encodeURIComponent(body));
+              .replaceAll('{{issue.key}}', esc(p.key))
+              .replaceAll('{{issue.summary}}', esc(p.summary))
+              .replaceAll('{{description}}', esc(p.description))
+              .replaceAll('{{initiator}}', esc(p.initiator))
+              .replaceAll('{{priority}}', esc(p.priority))
+              .replaceAll('{{issue.url}}', esc(p.url));
+
+            core.setOutput('body', body);
 
       # 4) 라벨 결정 (Story/Bug 고정, Task는 Jira Labels → GitHub Labels 매핑)
       - id: labels
@@ -113,16 +98,18 @@ jobs:
           script: |
             const p = context.payload.client_payload || {};
             const title = `[${p.key}] ${p.summary}`;
-            const labels = JSON.parse(`${{ steps.labels.outputs.labels }}`);
       
+            // 1️⃣ 디코딩 추가
             const encoded = `${{ steps.render.outputs.body }}`;
             const body = decodeURIComponent(encoded);
+      
+            const labels = JSON.parse(`${{ steps.labels.outputs.labels }}`);
       
             const res = await github.rest.issues.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
               title,
-              body,
+              body,  // 2️⃣ 디코딩된 텍스트로 전달
               labels
             });
             core.info(`Created issue #${res.data.number}`);
