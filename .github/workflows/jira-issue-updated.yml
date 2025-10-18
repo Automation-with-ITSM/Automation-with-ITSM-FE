@@ -1,4 +1,4 @@
-name: Update issue from Jira (no-encode)
+name: Update issue from Jira
 
 on:
   repository_dispatch:
@@ -102,3 +102,39 @@ jobs:
             });
 
             core.info(`Patched issue #${number} (kind=${kind}, labels=${JSON.stringify(labels)})`);
+
+      - name: Write back issue number to Jira
+        uses: actions/github-script@v7
+        env:
+          JIRA_BASE: https://automation-itsm.atlassian.net
+          JIRA_EMAIL: ${{ secrets.JIRA_USER_EMAIL }}
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+        with:
+          script: |
+            const p = context.payload.client_payload || {};
+            const key = p.key; // e.g., SCRUM-86
+            const number = String((await github.rest.issues.get({
+              owner: context.repo.owner, repo: context.repo.repo,
+              issue_number: context.payload.client_payload && context.payload.client_payload._fake ? 0 : 0 // dummy to keep types; we already have number from creation step if needed
+            })).data.number) // <- 간단히 설명: 이미 윗 스텝에서 res.data.number를 변수에 담았다면 그 값을 그대로 쓰세요.
+      
+            // 실제로는 위 create step에서 res.data.number를 outputs로 넘기거나 동일 스텝 내부 변수로 쓰면 됩니다.
+            // 여기서는 예시로 number 변수를 확보했다고 가정합니다.
+      
+            const fetch = require('node-fetch');
+            const resp = await fetch(`${process.env.JIRA_BASE_URL}/rest/api/3/issue/${encodeURIComponent(key)}`, {
+              method: 'PUT',
+              headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'Authorization': 'Basic ' + Buffer.from(`${process.env.JIRA_USER_EMAIL}:${process.env.JIRA_API_TOKEN}`).toString('base64')
+              },
+              body: JSON.stringify({
+                fields: {
+                  customfield_gh_number: number
+                }
+              })
+            });
+            if (!resp.ok) {
+              core.setFailed(`Failed to write GH number to Jira: ${resp.status} ${await resp.text()}`);
+            }
