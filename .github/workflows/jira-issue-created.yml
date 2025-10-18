@@ -1,8 +1,8 @@
-name: Create GitHub Issue from Jira
+name: Create GitHub Issue from Jira (no-encode)
 
 on:
   repository_dispatch:
-    types: [jira-issue]  # Jira에서 event_type으로 보냄
+    types: [jira-issue]
 
 permissions:
   contents: read
@@ -11,108 +11,83 @@ permissions:
 jobs:
   create-issue:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
 
-      # 1) 템플릿 선택 (Story/Bug/Task)
-      - id: pick_tpl
+      - name: Render template and create issue
         uses: actions/github-script@v7
         with:
           script: |
+            const fs = require('fs');
+            const path = require('path');
+
             const p = context.payload.client_payload || {};
             const kind = (p.kind || '').toLowerCase();
+
+            // 1) 템플릿 선택 (파일명/경로 업데이트)
             const mapping = {
-              'story': '.github/ISSUE_TEMPLATE/automation-story.md',
-              'bug': '.github/ISSUE_TEMPLATE/automation-bug.md',
-              'task': '.github/ISSUE_TEMPLATE/automation-task.md'
+              story: '.github/ISSUE_TEMPLATE/automation-story.md',
+              bug: '.github/ISSUE_TEMPLATE/automation-bug.md',
+              task: '.github/ISSUE_TEMPLATE/automation-task.md'
             };
-            const file = mapping[kind] || '.github/ISSUE_TEMPLATE/automation-task.md';
-            core.info(`Kind: ${kind} -> template: ${file}`);
-            core.setOutput('file', file);
+            const file = mapping[kind] || mapping.task; // 기본은 task
+            const templatePath = path.join(process.cwd(), file);
+            if (!fs.existsSync(templatePath)) {
+              core.setFailed(`Template not found: ${file}`);
+              return;
+            }
+            const tpl = fs.readFileSync(templatePath, 'utf8');
 
-      # 2) 템플릿 로드(개행/퍼센트 이스케이프)
-      - id: read_tpl
-        run: |
-          TPL="$(cat "${{ steps.pick_tpl.outputs.file }}")"
-          TPL="${TPL//'%'/'%25'}"
-          TPL="${TPL//$'\n'/'%0A'}"
-          TPL="${TPL//$'\r'/'%0D'}"
-          echo "tpl=$TPL" >> $GITHUB_OUTPUT
+            // 2) 값 준비 (기본값 포함)
+            const esc = (s) => (s ?? '').toString();
+            const nz  = (s, fallback='') => {
+              const v = (s ?? '').toString().trim();
+              return v.length ? v : fallback;
+            };
 
-      # 3) 템플릿 렌더링(본문 구성)
-      - id: render
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const tpl = `${{ steps.read_tpl.outputs.tpl }}`;
-            const p = context.payload.client_payload || {};
-            const esc = (s='') => String(s);
+            const key        = esc(p.key);
+            const url        = esc(p.url);
+            const summary    = esc(p.summary);
+            const description= esc(p.description);
+            const initiator  = esc(p.initiator);
+            const priority   = esc(p.priority);
+            const duedate    = nz(p.duedate, '미정');
 
-            // 템플릿의 플레이스홀더 치환
+            // 3) 템플릿 치환 ({{key}} / {{issue.key}} 양쪽 지원)
             let body = tpl
-              .replaceAll('{{issue.key}}', esc(p.key))
-              .replaceAll('{{issue.summary}}', esc(p.summary))
-              .replaceAll('{{description}}', esc(p.description))
-              .replaceAll('{{initiator}}', esc(p.initiator))
-              .replaceAll('{{priority}}', esc(p.priority))
-              .replaceAll('{{issue.url}}', esc(p.url));
+              .replaceAll('{{issue.key}}', key)
+              .replaceAll('{{key}}', key)
+              .replaceAll('{{issue.url}}', url)
+              .replaceAll('{{url}}', url)
+              .replaceAll('{{issue.summary}}', summary)
+              .replaceAll('{{summary}}', summary)
+              .replaceAll('{{description}}', description)
+              .replaceAll('{{initiator}}', initiator)
+              .replaceAll('{{priority}}', priority)
+              .replaceAll('{{issue.duedate}}', duedate)
+              .replaceAll('{{duedate}}', duedate);
 
-            core.setOutput('body', body);
-
-      # 4) 라벨 결정 (Story/Bug 고정, Task는 Jira Labels → GitHub Labels 매핑)
-      - id: labels
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const p = context.payload.client_payload || {};
-            const kind = (p.kind || '').toLowerCase();
-
-            // Task에서 허용할 라벨(레포에 미리 생성되어 있어야 함)
+            // 4) 라벨 결정 (Story/Bug 고정, Task는 Feature/Refactor/Documentation만 허용)
             const allowed = new Set(['Feature','Refactor','Documentation']);
-
             let labels = [];
-            if (kind === 'story') {
-              labels = ['Story'];
-            } else if (kind === 'bug') {
-              labels = ['Bug'];
-            } else {
-              // task: p.labels가 문자열/배열 어떤 형태로 와도 처리
+            if (kind === 'story') labels = ['Story'];
+            else if (kind === 'bug') labels = ['Bug'];
+            else {
               let incoming = [];
               if (Array.isArray(p.labels)) incoming = p.labels;
-              else if (typeof p.labels === 'string') incoming = p.labels.split(',').map(s => s.trim()).filter(Boolean);
-
+              else if (typeof p.labels === 'string') incoming = p.labels.split(',').map(s=>s.trim()).filter(Boolean);
               labels = incoming.filter(v => allowed.has(v));
-              // 매핑 결과가 없으면 안전 라벨(선택) - 필요 없으면 빈 배열 유지
-              if (labels.length === 0) {
-                labels = ['Task']; // 레포에 'Task' 라벨이 없다면 제거하거나 allowed에 맞게 수정
-              }
+              if (labels.length === 0) labels = ['Task']; // 필요 없으면 제거
             }
-            core.info(`Final labels: ${JSON.stringify(labels)}`);
-            core.setOutput('labels', JSON.stringify(labels));
 
-      # 5) 이슈 생성
-      - name: Create GitHub Issue
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const p = context.payload.client_payload || {};
-            const title = `[${p.key}] ${p.summary}`;
-      
-            // 1️⃣ 디코딩 추가
-            const encoded = `${{ steps.render.outputs.body }}`;
-            const body = decodeURIComponent(encoded);
-      
-            const labels = JSON.parse(`${{ steps.labels.outputs.labels }}`);
-      
+            // 5) 이슈 생성 (인코딩/디코딩 없이 그대로)
+            const title = `[${key}] ${summary}`;
             const res = await github.rest.issues.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
               title,
-              body,  // 2️⃣ 디코딩된 텍스트로 전달
+              body,
               labels
             });
-            core.info(`Created issue #${res.data.number}`);
 
-            // (선택) 생성된 GitHub 이슈 번호를 출력 (Jira 커스텀 필드에 저장할 때 유용)
-            core.setOutput('issue_number', String(res.data.number));
+            core.info(`Created issue #${res.data.number}`);
