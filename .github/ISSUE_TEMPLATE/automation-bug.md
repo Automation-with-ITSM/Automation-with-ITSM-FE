@@ -8,11 +8,6 @@
 
 ---
 
-### 👤 담당자
-{{initiator}}
-
-
-
 ### 🎯 우선순위
 <ins>{{priority}}</ins>
 
