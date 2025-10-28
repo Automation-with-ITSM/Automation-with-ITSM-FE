@@ -14,10 +14,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # (선택) 페이로드 확인
-      - name: Debug payload (optional)
-        run: echo "${{ toJson(github.event.client_payload) }}"
-
       - name: Render via template and safe patch
         uses: actions/github-script@v7
         with:
@@ -30,11 +26,43 @@ jobs:
             const nz  = (s, f='') => { const v = esc(s).trim(); return v ? v : f; };
             const has = (s) => !!esc(s).trim();
 
-            // urlEncoded(%)이면 복원
+            // urlEncoded(%)이면 복원 (+ → space 보정)
             const decodeMaybe = (s) => {
               const str = esc(s);
-              try { return /%[0-9A-Fa-f]{2}/.test(str) ? decodeURIComponent(str) : str; }
-              catch { return str; }
+              try {
+                let decoded = /%[0-9A-Fa-f]{2}/.test(str) ? decodeURIComponent(str) : str;
+                decoded = decoded.replace(/\+/g, ' ');
+                return decoded;
+              } catch { return str; }
+            };
+
+            // ✅ 깃허브 체크박스 포맷으로 정규화
+            const toCheckboxList = (text) => {
+              const lines = esc(text).replace(/\r\n?/g, '\n').split('\n');
+              const out = [];
+              for (let raw of lines) {
+                let line = raw.trim();
+                if (!line) continue;
+
+                // 이미 체크박스면 유지
+                if (/^- \[.\]/.test(line)) { out.push(line); continue; }
+
+                // [] 또는 [ ] 로 시작 → 체크박스로
+                if (/^\[\s?\]/.test(line)) {
+                  out.push(`- [ ] ${line.replace(/^$begin:math:display$\\s?$end:math:display$\s*/, '')}`);
+                  continue;
+                }
+
+                // 불릿/번호/점 등으로 시작 → 체크박스로
+                if (/^(?:[-*•]\s+|\d+[.)]\s+)/.test(line)) {
+                  out.push(`- [ ] ${line.replace(/^(?:[-*•]\s+|\d+[.)]\s+)/, '')}`);
+                  continue;
+                }
+
+                // 그 외 임의 텍스트도 체크박스로
+                out.push(`- [ ] ${line}`);
+              }
+              return out.join('\n');
             };
 
             // 0) 필수값: 이슈 번호
@@ -73,10 +101,11 @@ jobs:
             const key         = esc(p.key);
             const url         = esc(p.url);
             const summary     = esc(p.summary);
-            const description = esc(p.description);        // Jira에서 htmlEscape 적용되어 옴
+            const description = esc(p.description);          // Jira에서 htmlEscape 적용되어 옴
             const priority    = esc(p.priority);
             const duedate     = nz(p.duedate, '미정');
-            const checklist   = decodeMaybe(p.checklist);  // Paragraph(urlEncode) → decode
+            const checklistRaw= decodeMaybe(p.checklist);    // Paragraph(urlEncode) → decode
+            const checklist   = toCheckboxList(checklistRaw);
 
             // 5) 템플릿 바인딩
             let producedBody = '';
@@ -96,7 +125,7 @@ jobs:
 
               // 템플릿에 {{checklist}} 자리표시자가 없다면 섹션 자동 추가
               if (has(checklist) && !tpl.includes('{{checklist}}')) {
-                body += `\n\n---\n\n## ✅ To-Do CheckList\n${checklist}\n`;
+                body += `\n\n---\n\n### ✅ To-Do CheckList\n${checklist}\n`;
               }
               producedBody = body.trim();
             } else {
@@ -106,7 +135,7 @@ jobs:
                 parts.push('## 📄 이슈 개요 (Description)', `> ${description}`, '');
               }
               if (has(checklist)) {
-                parts.push('---', '', '## ✅ To-Do CheckList', checklist, '');
+                parts.push('---', '', '### ✅ To-Do CheckList', checklist, '');
               }
               if (has(priority)) {
                 parts.push('---', '', '### 🎯 우선순위', `<ins>${priority}</ins>`, '');
@@ -122,9 +151,6 @@ jobs:
             }
 
             // 6) 본문 덮어쓰기 조건 보강
-            //    description / checklist / priority / duedate / key / url 중
-            //    하나라도 값이 들어오면 템플릿로 재생성한 본문으로 교체,
-            //    아니면 기존 본문 유지
             const shouldReplaceBody =
               has(description) || has(checklist) || has(priority) || has(duedate) || has(key) || has(url) || !curBody;
 
