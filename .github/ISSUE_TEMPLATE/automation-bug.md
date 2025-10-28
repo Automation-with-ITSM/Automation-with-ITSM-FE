@@ -3,6 +3,11 @@
 
 ---
 
+### ✅ To-Do CheckList
+{{checklist}}
+
+---
+
 ### 👤 담당자
 {{initiator}}
 
