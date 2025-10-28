@@ -1,22 +1,22 @@
 ## 📄 이슈 개요 (Description)
-{{description}}
+> {{description}}
 
 ---
 
-### 🧑‍💻 담당자
+### 👤 담당자
 {{initiator}}
 
----
+
 
 ### 🎯 우선순위
-{{priority}}
+<ins>{{priority}}</ins>
 
----
+
 
 ### 📅 기한
-{{duedate}}
+*{{duedate}}*
 
----
+
 
 ### 🔗 Jira Link
-[{{key}}]({{url}})
+[**{{key}}**]({{url}})
