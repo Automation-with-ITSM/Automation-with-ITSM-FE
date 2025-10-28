@@ -14,73 +14,136 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Render and patch existing issue
+      # (선택) 페이로드 확인
+      - name: Debug payload (optional)
+        run: echo "${{ toJson(github.event.client_payload) }}"
+
+      - name: Render via template and safe patch
         uses: actions/github-script@v7
         with:
           script: |
-            const p = context.payload.client_payload || {};
+            const fs = require('fs');
+            const path = require('path');
+
+            const p   = context.payload.client_payload || {};
             const esc = (s) => (s ?? '').toString();
             const nz  = (s, f='') => { const v = esc(s).trim(); return v ? v : f; };
+            const has = (s) => !!esc(s).trim();
+
+            // urlEncoded(%)이면 복원
             const decodeMaybe = (s) => {
               const str = esc(s);
               try { return /%[0-9A-Fa-f]{2}/.test(str) ? decodeURIComponent(str) : str; }
               catch { return str; }
             };
 
-            // 0) 필수 값 확인
-            let number = Number(p.issue_number);
-            if (!number) {
+            // 0) 필수값: 이슈 번호
+            const issue_number = Number(p.issue_number);
+            if (!issue_number) {
               core.setFailed('Missing issue_number in payload');
               return;
             }
+            const owner = context.repo.owner;
+            const repo  = context.repo.repo;
 
-            // 1) kind 정규화 (story/bug/task)
+            // 1) 현재 GH 이슈 읽기(빈값 덮어쓰기 방지용)
+            const cur = await github.rest.issues.get({ owner, repo, issue_number });
+            const curTitle  = cur.data.title || '';
+            const curBody   = cur.data.body  || '';
+            const curLabels = (cur.data.labels || []).map(l => typeof l === 'string' ? l : l.name).filter(Boolean);
+
+            // 2) kind 정규화 (한글/영문)
             const rawKind = esc(p.kind).toLowerCase();
-            let kind = 'task';
-            if (rawKind.startsWith('story')) kind = 'story';
-            else if (rawKind.startsWith('bug')) kind = 'bug';
+            const isStory = /^(story|스토리)/.test(rawKind);
+            const isBug   = /^(bug|버그)/.test(rawKind);
+            const kind    = isStory ? 'story' : (isBug ? 'bug' : 'task');
 
-            // 2) 본문 재구성 (템플릿 없이 Markdown 조립) + 체크리스트 삽입
-            const checklist = decodeMaybe(p.checklist);
-            const bodyLines = [
-              '## 📄 이슈 개요 (Description)',
-              esc(p.description),
-              ''
-            ];
-            if (checklist) {
-              bodyLines.push('---', '', '## ✅ To-Do', checklist, '');
-            }
-            bodyLines.push(
-              '---', '',
-              '### 🧑‍💻 생성자',
-              esc(p.initiator),
-              '',
-              '---', '',
-              '### 🎯 우선순위',
-              esc(p.priority),
-              '',
-              '---', '',
-              '### 📅 기한',
-              nz(p.duedate, '미정'),
-              '',
-              '---', '',
-              '### 🔗 Jira Link',
-              `[${esc(p.key)}](${esc(p.url)})`
-            );
-            const body = bodyLines.join('\n');
+            // 3) 템플릿 선택 (업데이트도 생성과 동일 템플릿 사용)
+            const mapping = {
+              story: '.github/ISSUE_TEMPLATE/automation-story.md',
+              bug:   '.github/ISSUE_TEMPLATE/automation-bug.md',
+              task:  '.github/ISSUE_TEMPLATE/automation-task.md'
+            };
+            const file = mapping[kind] || mapping.task;
+            const templatePath = path.join(process.cwd(), file);
+            const hasTemplate = fs.existsSync(templatePath);
+            const tpl = hasTemplate ? fs.readFileSync(templatePath, 'utf8') : '';
 
-            // 3) 라벨 동기화 규칙
-            const allowed = new Set(['Feature','Refactor','Documentation']);
-            let labels = [];
-            if (kind === 'story') {
-              labels = ['Story'];
-            } else if (kind === 'bug') {
-              labels = ['Bug'];
+            // 4) 값 준비
+            const key         = esc(p.key);
+            const url         = esc(p.url);
+            const summary     = esc(p.summary);
+            const description = esc(p.description);        // Jira에서 htmlEscape 적용되어 옴
+            const priority    = esc(p.priority);
+            const duedate     = nz(p.duedate, '미정');
+            const checklist   = decodeMaybe(p.checklist);  // Paragraph(urlEncode) → decode
+
+            // 5) 템플릿 바인딩
+            let producedBody = '';
+            if (hasTemplate) {
+              let body = tpl
+                .replaceAll('{{issue.key}}', key)
+                .replaceAll('{{key}}', key)
+                .replaceAll('{{issue.url}}', url)
+                .replaceAll('{{url}}', url)
+                .replaceAll('{{issue.summary}}', summary)
+                .replaceAll('{{summary}}', summary)
+                .replaceAll('{{description}}', has(description) ? description : '')
+                .replaceAll('{{priority}}', has(priority) ? priority : '')
+                .replaceAll('{{issue.duedate}}', duedate)
+                .replaceAll('{{duedate}}', duedate)
+                .replaceAll('{{checklist}}', has(checklist) ? checklist : '');
+
+              // 템플릿에 {{checklist}} 자리표시자가 없다면 섹션 자동 추가
+              if (has(checklist) && !tpl.includes('{{checklist}}')) {
+                body += `\n\n---\n\n## ✅ To-Do CheckList\n${checklist}\n`;
+              }
+              producedBody = body.trim();
             } else {
+              // 템플릿이 없을 때 최소 안전 조립 (fallback)
+              const parts = [];
+              if (has(description)) {
+                parts.push('## 📄 이슈 개요 (Description)', `> ${description}`, '');
+              }
+              if (has(checklist)) {
+                parts.push('---', '', '## ✅ To-Do CheckList', checklist, '');
+              }
+              if (has(priority)) {
+                parts.push('---', '', '### 🎯 우선순위', `<ins>${priority}</ins>`, '');
+              }
+              if (has(duedate)) {
+                parts.push('', '### 📅 기한', `*${duedate}*`, '');
+              }
+              if (has(key) || has(url)) {
+                const link = has(url) ? `[**${key}**](${url})` : key;
+                parts.push('', '### 🔗 Jira Link', link);
+              }
+              producedBody = parts.join('\n').trim();
+            }
+
+            // 6) 본문 덮어쓰기 조건 보강
+            //    description / checklist / priority / duedate / key / url 중
+            //    하나라도 값이 들어오면 템플릿로 재생성한 본문으로 교체,
+            //    아니면 기존 본문 유지
+            const shouldReplaceBody =
+              has(description) || has(checklist) || has(priority) || has(duedate) || has(key) || has(url) || !curBody;
+
+            const nextBody = shouldReplaceBody ? (producedBody || curBody) : curBody;
+
+            // 7) 제목: 값이 비면 기존 유지
+            const nextTitle = (has(key) || has(summary))
+              ? `[${nz(key, curTitle)}] ${nz(summary, curTitle)}`
+              : curTitle;
+
+            // 8) 라벨 계산 (Story/Bug 고정, Task는 3종만; 비면 기존 유지)
+            const allowed = new Set(['Feature','Refactor','Documentation','Story','Bug']);
+            let computed = [];
+            if (isStory) computed = ['Story'];
+            else if (isBug) computed = ['Bug'];
+            else {
               let incoming = [];
-              if (Array.isArray(p.labels)) {
-                incoming = p.labels;
-              } else if (typeof p.labels === 'string') {
+              if (Array.isArray(p.labels)) incoming = p.labels;
+              else if (typeof p.labels === 'string') {
                 try {
                   const parsed = JSON.parse(p.labels);
                   if (Array.isArray(parsed)) incoming = parsed;
@@ -90,52 +153,16 @@ jobs:
                 }
               }
               const toTitle = s => s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : s;
-              labels = incoming.map(toTitle).filter(v => allowed.has(v));
-              if (labels.length === 0) labels = ['Task'];
+              computed = incoming.map(toTitle).filter(v => allowed.has(v) && v !== 'Story' && v !== 'Bug');
+            }
+            const setLabels = computed.length > 0; // 비면 기존 라벨 유지 (‘Task’ 자동 생성 방지)
+
+            // 9) 패치
+            if (nextTitle !== curTitle || nextBody !== curBody) {
+              await github.rest.issues.update({ owner, repo, issue_number, title: nextTitle, body: nextBody });
+            }
+            if (setLabels) {
+              await github.rest.issues.setLabels({ owner, repo, issue_number, labels: computed });
             }
 
-            // 4) 제목 갱신
-            const title = `[${esc(p.key)}] ${esc(p.summary)}`;
-
-            const owner = context.repo.owner;
-            const repo  = context.repo.repo;
-
-            async function patch(num) {
-              await github.rest.issues.update({ owner, repo, issue_number: num, title, body });
-              await github.rest.issues.setLabels({ owner, repo, issue_number: num, labels });
-            }
-
-            // 4-1) 404 방지용 폴백: 번호가 틀린 경우 검색해서 재시도
-            async function searchIssueNumber() {
-              // 1) 제목 완전일치
-              let q = `repo:${owner}/${repo} is:issue in:title "[${esc(p.key)}] ${esc(p.summary)}"`;
-              let r = await github.rest.search.issuesAndPullRequests({ q });
-              if (r.data.total_count) return r.data.items[0].number;
-
-              // 2) 본문에 Jira URL 포함
-              q = `repo:${owner}/${repo} is:issue in:body "${esc(p.url).replace(/"/g,'\\"')}"`;
-              r = await github.rest.search.issuesAndPullRequests({ q });
-              if (r.data.total_count) return r.data.items[0].number;
-
-              // 3) 제목에 Jira 키만
-              q = `repo:${owner}/${repo} is:issue in:title "${esc(p.key)}"`;
-              r = await github.rest.search.issuesAndPullRequests({ q });
-              if (r.data.total_count) return r.data.items[0].number;
-
-              return 0;
-            }
-
-            try {
-              await patch(number);
-              core.info(`Patched issue #${number} (kind=${kind}, labels=${JSON.stringify(labels)})`);
-            } catch (e) {
-              if (e.status === 404) {
-                const fallback = await searchIssueNumber();
-                if (!fallback) throw e;
-                number = fallback;
-                await patch(number);
-                core.info(`Patched by fallback search → issue #${number}`);
-              } else {
-                throw e;
-              }
-            }
+            core.info(`Patched #${issue_number} titleChanged=${nextTitle!==curTitle} bodyChanged=${nextBody!==curBody} labelsSet=${setLabels} kind=${kind} computed=${JSON.stringify(computed)}`);
